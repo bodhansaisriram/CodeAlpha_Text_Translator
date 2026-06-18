@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Translate — Language Translation Tool</title>
+
+<!-- Google Fonts: Fraunces for the headline, Inter for everything else -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+  /* ============================================================
+     1. DESIGN TOKENS
+     All colors, fonts and spacing are defined once here as CSS
+     variables, so the whole look of the page can be changed by
+     editing just this block.
+  ============================================================ */
+  :root{
+    --bg: #F6F1E7;          /* warm paper background */
+    --panel: #FFFFFF;       /* card background */
+    --ink: #201F1B;         /* main text color */
+    --muted: #6B6358;       /* secondary text color */
+    --accent: #1F6F6B;      /* teal accent (buttons, focus) */
+    --accent-dark: #154E4B; /* darker teal for hover */
+    --accent-soft: #E4EFEC; /* light teal tint */
+    --border: #E3DDCF;      /* soft border color */
+    --error: #B3261E;       /* error red */
+    --radius: 14px;
+    --font-display: 'Fraunces', serif;
+    --font-body: 'Inter', sans-serif;
+  }
+
+  *{ box-sizing: border-box; }
+
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:var(--font-body);
+    min-height:100vh;
+    display:flex;
+    justify-content:center;
+    padding:48px 20px 64px;
+  }
+
+  .page{ width:100%; max-width:880px; }
+
+  /* ---------- Header ---------- */
+  .eyebrow{
+    font-size:13px;
+    font-weight:600;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    color:var(--accent-dark);
+    margin-bottom:10px;
+  }
+  h1{
+    font-family:var(--font-display);
+    font-weight:600;
+    font-size:clamp(34px, 6vw, 52px);
+    margin:0 0 8px;
+    letter-spacing:-0.01em;
+  }
+  .subtitle{
+    color:var(--muted);
+    font-size:16px;
+    max-width:520px;
+    line-height:1.5;
+    margin:0 0 36px;
+  }
+
+  /* ---------- Card ---------- */
+  .card{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:28px;
+    box-shadow:0 1px 2px rgba(32,31,27,.04), 0 12px 32px -16px rgba(32,31,27,.12);
+  }
+
+  /* ---------- Language selector row ---------- */
+  .lang-row{
+    display:flex;
+    align-items:center;
+    gap:14px;
+    margin-bottom:22px;
+  }
+  select{
+    flex:1;
+    min-width:0;
+    padding:11px 14px;
+    border-radius:10px;
+    border:1px solid var(--border);
+    background:#FBF9F4;
+    color:var(--ink);
+    font-family:var(--font-body);
+    font-size:15px;
+    font-weight:500;
+    cursor:pointer;
+    appearance:none;
+  }
+  select:focus{ outline:2px solid var(--accent); outline-offset:1px; }
+
+  /* the round swap button — the signature interactive element */
+  .swap-btn{
+    flex:0 0 auto;
+    width:42px;
+    height:42px;
+    border-radius:50%;
+    border:1px solid var(--border);
+    background:var(--accent-soft);
+    color:var(--accent-dark);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    transition:transform .35s ease, background .2s ease;
+  }
+  .swap-btn:hover{ background:var(--accent); color:#fff; }
+  .swap-btn.spin{ transform:rotate(180deg); }
+  .swap-btn svg{ width:18px; height:18px; }
+
+  /* ---------- Input / Output panels ---------- */
+  .panels{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:18px;
+  }
+  @media (max-width:640px){
+    .panels{ grid-template-columns:1fr; }
+  }
+
+  .panel-label{
+    font-size:13px;
+    font-weight:600;
+    color:var(--muted);
+    margin-bottom:8px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+  }
+
+  textarea{
+    width:100%;
+    height:180px;
+    resize:vertical;
+    padding:14px;
+    border-radius:10px;
+    border:1px solid var(--border);
+    background:#FBF9F4;
+    color:var(--ink);
+    font-family:var(--font-body);
+    font-size:15px;
+    line-height:1.5;
+  }
+  textarea:focus{ outline:2px solid var(--accent); outline-offset:1px; }
+
+  .char-count{
+    text-align:right;
+    font-size:12px;
+    color:var(--muted);
+    margin-top:6px;
+  }
+
+  .script-hint{
+    display:none;
+    margin-top:8px;
+    padding:10px 12px;
+    border-radius:8px;
+    background:#FBF1DC;
+    border:1px solid #EBD9A8;
+    color:#7A5C12;
+    font-size:12.5px;
+    line-height:1.5;
+  }
+
+  .output-box{
+    height:180px;
+    overflow-y:auto;
+    padding:14px;
+    border-radius:10px;
+    border:1px solid var(--border);
+    background:var(--accent-soft);
+    font-size:15px;
+    line-height:1.5;
+    color:var(--ink);
+  }
+  .output-box.placeholder{ color:var(--muted); font-style:italic; }
+  .output-box.error-text{ color:var(--error); font-style:normal; }
+
+  .icon-btn{
+    border:none;
+    background:none;
+    color:var(--muted);
+    cursor:pointer;
+    padding:4px;
+    display:inline-flex;
+    align-items:center;
+    gap:4px;
+    font-size:12px;
+    font-family:var(--font-body);
+    font-weight:600;
+    border-radius:6px;
+  }
+  .icon-btn:hover{ color:var(--accent-dark); background:rgba(31,111,107,.08); }
+  .icon-btn svg{ width:15px; height:15px; }
+  .output-tools{ display:flex; gap:6px; }
+
+  /* ---------- Translate button ---------- */
+  .translate-wrap{
+    display:flex;
+    justify-content:center;
+    margin-top:24px;
+  }
+  #translateBtn{
+    background:var(--accent);
+    color:#fff;
+    border:none;
+    padding:13px 36px;
+    font-size:15px;
+    font-weight:600;
+    font-family:var(--font-body);
+    border-radius:999px;
+    cursor:pointer;
+    display:inline-flex;
+    align-items:center;
+    gap:10px;
+    transition:background .2s ease;
+  }
+  #translateBtn:hover{ background:var(--accent-dark); }
+  #translateBtn:disabled{ background:#A9C8C5; cursor:not-allowed; }
+
+  .spinner{
+    width:16px; height:16px;
+    border:2px solid rgba(255,255,255,.4);
+    border-top-color:#fff;
+    border-radius:50%;
+    animation:spin .8s linear infinite;
+    display:none;
+  }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+
+  footer{
+    text-align:center;
+    color:var(--muted);
+    font-size:13px;
+    margin-top:28px;
+    line-height:1.6;
+  }
+  footer a{ color:var(--accent-dark); text-decoration:none; font-weight:600; }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <!-- ============================================================
+       2. PAGE HEADER
+  ============================================================ -->
+  <h1>Translate</h1>
+  <p class="subtitle">Type or paste text, choose a source and target language, and get an instant translation you can copy or listen to.</p>
+
+  <!-- ============================================================
+       3. MAIN CARD — language pickers + text panels
+  ============================================================ -->
+  <div class="card">
+
+    <!-- Source / Target language selectors + swap button -->
+    <div class="lang-row">
+      <select id="sourceLang" aria-label="Source language"></select>
+
+      <button class="swap-btn" id="swapBtn" title="Swap languages" aria-label="Swap languages">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="17 1 21 5 17 9"></polyline>
+          <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
+          <polyline points="7 23 3 19 7 15"></polyline>
+          <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
+        </svg>
+      </button>
+
+      <select id="targetLang" aria-label="Target language"></select>
+    </div>
+
+    <!-- Input + Output text panels -->
+    <div class="panels">
+      <div>
+        <div class="panel-label">Enter text</div>
+        <textarea id="inputText" maxlength="500" placeholder="Start typing here..."></textarea>
+        <div class="char-count"><span id="charCount">0</span>/500</div>
+        <div class="script-hint" id="scriptHint"></div>
+      </div>
+
+      <div>
+        <div class="panel-label">
+          <span>Translation</span>
+          <div class="output-tools" id="outputTools" style="display:none;">
+            <button class="icon-btn" id="copyBtn" title="Copy translation">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+              Copy
+            </button>
+            <button class="icon-btn" id="speakBtn" title="Listen to translation">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.5 8.5a5 5 0 0 1 0 7"></path></svg>
+              Listen
+            </button>
+          </div>
+        </div>
+        <div class="output-box placeholder" id="outputBox">Your translation will appear here.</div>
+      </div>
+    </div>
+
+    <!-- Translate action button -->
+    <div class="translate-wrap">
+      <button id="translateBtn">
+        <span class="spinner" id="spinner"></span>
+        <span id="translateBtnText">Translate</span>
+      </button>
+    </div>
+
+  </div>
+
+  <footer>
+    Powered by the free MyMemory Translation API · No sign-up or API key required.
+  </footer>
+
+</div>
+
+<script>
+/* ================================================================
+   STEP 1 — GRAB REFERENCES TO ALL THE HTML ELEMENTS WE NEED
+   We do this once at the top so the rest of the script can simply
+   reuse these variables instead of searching the page every time.
+================================================================ */
+const sourceLangEl   = document.getElementById('sourceLang');
+const targetLangEl   = document.getElementById('targetLang');
+const swapBtn         = document.getElementById('swapBtn');
+const inputTextEl    = document.getElementById('inputText');
+const charCountEl    = document.getElementById('charCount');
+const scriptHintEl   = document.getElementById('scriptHint');
+const outputBoxEl    = document.getElementById('outputBox');
+const outputToolsEl  = document.getElementById('outputTools');
+const translateBtn   = document.getElementById('translateBtn');
+const translateBtnText = document.getElementById('translateBtnText');
+const spinnerEl      = document.getElementById('spinner');
+const copyBtn        = document.getElementById('copyBtn');
+const speakBtn       = document.getElementById('speakBtn');
+
+/* ================================================================
+   STEP 2 — LANGUAGE DATA
+   Each language has:
+   - code   : the language code the translation API understands
+   - label  : what the user sees in the dropdown
+   - speech : the locale code used by the browser's text-to-speech
+              engine (slightly different format, e.g. "en-US")
+================================================================ */
+const LANGUAGES = [
+  { code: 'en',    label: 'English',              speech: 'en-US' },
+  { code: 'hi',    label: 'Hindi',                 speech: 'hi-IN' },
+  { code: 'te',    label: 'Telugu',                speech: 'te-IN' },
+  { code: 'ta',    label: 'Tamil',                 speech: 'ta-IN' },
+  { code: 'kn',    label: 'Kannada',                speech: 'kn-IN' },
+  { code: 'ml',    label: 'Malayalam',             speech: 'ml-IN' },
+  { code: 'bn',    label: 'Bengali',                speech: 'bn-IN' },
+  { code: 'gu',    label: 'Gujarati',               speech: 'gu-IN' },
+  { code: 'mr',    label: 'Marathi',                speech: 'mr-IN' },
+  { code: 'pa',    label: 'Punjabi',                speech: 'pa-IN' },
+  { code: 'ur',    label: 'Urdu',                   speech: 'ur-PK' },
+  { code: 'es',    label: 'Spanish',                speech: 'es-ES' },
+  { code: 'fr',    label: 'French',                 speech: 'fr-FR' },
+  { code: 'de',    label: 'German',                 speech: 'de-DE' },
+  { code: 'it',    label: 'Italian',                speech: 'it-IT' },
+  { code: 'pt',    label: 'Portuguese',             speech: 'pt-PT' },
+  { code: 'ru',    label: 'Russian',                speech: 'ru-RU' },
+  { code: 'zh-CN', label: 'Chinese (Simplified)',  speech: 'zh-CN' },
+  { code: 'ja',    label: 'Japanese',               speech: 'ja-JP' },
+  { code: 'ko',    label: 'Korean',                 speech: 'ko-KR' },
+  { code: 'ar',    label: 'Arabic',                 speech: 'ar-SA' },
+  { code: 'tr',    label: 'Turkish',                speech: 'tr-TR' },
+  { code: 'nl',    label: 'Dutch',                  speech: 'nl-NL' },
+  { code: 'vi',    label: 'Vietnamese',             speech: 'vi-VN' },
+  { code: 'th',    label: 'Thai',                   speech: 'th-TH' },
+  { code: 'id',    label: 'Indonesian',             speech: 'id-ID' },
+];
+
+/* ================================================================
+   STEP 2b — LANGUAGES THAT USE A NON-LATIN SCRIPT
+   Used to detect when someone selects, say, Telugu as the source
+   but types the words phonetically using English letters — which
+   translation engines can't read correctly (see Step 4b below).
+================================================================ */
+const NON_LATIN_SCRIPT_CODES = new Set([
+  'hi','te','ta','kn','ml','bn','gu','mr','pa','ur',
+  'ar','ja','ko','zh-CN','ru','th'
+]);
+
+/* ================================================================
+   STEP 3 — FILL THE TWO DROPDOWNS WITH THE LANGUAGE LIST
+================================================================ */
+function populateLanguageDropdowns(){
+  LANGUAGES.forEach(lang => {
+    const opt1 = document.createElement('option');
+    opt1.value = lang.code;
+    opt1.textContent = lang.label;
+    sourceLangEl.appendChild(opt1);
+
+    const opt2 = document.createElement('option');
+    opt2.value = lang.code;
+    opt2.textContent = lang.label;
+    targetLangEl.appendChild(opt2);
+  });
+
+  // sensible defaults: English -> Hindi
+  sourceLangEl.value = 'en';
+  targetLangEl.value = 'hi';
+}
+populateLanguageDropdowns();
+
+/* ================================================================
+   STEP 4 — LIVE CHARACTER COUNTER
+   Updates the "0/500" label every time the user types.
+================================================================ */
+inputTextEl.addEventListener('input', () => {
+  charCountEl.textContent = inputTextEl.value.length;
+  checkScriptMismatch();
+});
+
+/* ================================================================
+   STEP 4b — WARN IF THE TYPED TEXT LOOKS LIKE THE WRONG SCRIPT
+   If the source language is one that normally uses its own script
+   (Telugu, Hindi, Arabic, etc.) but the typed text is plain ASCII
+   English letters, the API will just hand the text back unchanged.
+   We catch that here and explain it, instead of letting it look
+   like a silent bug.
+================================================================ */
+function checkScriptMismatch(){
+  const text = inputTextEl.value.trim();
+  const sourceCode = sourceLangEl.value;
+  const looksLikePlainEnglishLetters = /^[\x00-\x7F]*$/.test(text) && /[a-zA-Z]/.test(text);
+
+  if (text && looksLikePlainEnglishLetters && NON_LATIN_SCRIPT_CODES.has(sourceCode)){
+    const langLabel = LANGUAGES.find(l => l.code === sourceCode)?.label || 'this language';
+    scriptHintEl.textContent =
+      `Heads up: ${langLabel} is selected as the source, but this text is typed in English letters. ` +
+      `Translation engines need the actual ${langLabel} script to read it correctly — typing it phonetically ` +
+      `usually returns the same text unchanged. Try typing (or pasting) it in native script instead.`;
+    scriptHintEl.style.display = 'block';
+  } else {
+    scriptHintEl.style.display = 'none';
+  }
+}
+
+// Re-check whenever the source language is changed too
+sourceLangEl.addEventListener('change', checkScriptMismatch);
+
+
+/* ================================================================
+   STEP 5 — SWAP SOURCE AND TARGET LANGUAGES
+   Lets the user flip the two dropdowns with one click instead of
+   resetting both manually.
+================================================================ */
+swapBtn.addEventListener('click', () => {
+  const temp = sourceLangEl.value;
+  sourceLangEl.value = targetLangEl.value;
+  targetLangEl.value = temp;
+
+  // small spin animation for visual feedback
+  swapBtn.classList.add('spin');
+  setTimeout(() => swapBtn.classList.remove('spin'), 350);
+});
+
+/* ================================================================
+   STEP 6 — THE TRANSLATION FUNCTION (THIS IS THE CORE OF THE APP)
+   We call the free MyMemory Translation API:
+     https://api.mymemory.translated.net/get?q=TEXT&langpair=SRC|TGT
+   It needs no API key, which is why it's used here for a demo —
+   see the note in the README about switching to Google Cloud
+   Translation API or Microsoft Translator if you have paid keys.
+================================================================ */
+async function translateText(text, sourceCode, targetCode){
+  const endpoint =
+    `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}` +
+    `&langpair=${sourceCode}|${targetCode}`;
+
+  const response = await fetch(endpoint);
+  if (!response.ok){
+    throw new Error('Network error while contacting the translation service.');
+  }
+
+  const data = await response.json();
+  const translated = data?.responseData?.translatedText;
+
+  // MyMemory returns a 200 status even on some failures, but puts
+  // a warning message inside the text itself — we catch that here.
+  if (!translated || /MYMEMORY WARNING/i.test(translated)){
+    throw new Error('The translation service could not process this text. Try shorter text or try again in a moment.');
+  }
+
+  return translated;
+}
+
+/* ================================================================
+   STEP 7 — WIRE UP THE "TRANSLATE" BUTTON
+   Handles: validation, loading state, calling the API,
+   displaying the result, and showing errors.
+================================================================ */
+translateBtn.addEventListener('click', async () => {
+  const text = inputTextEl.value.trim();
+  const sourceCode = sourceLangEl.value;
+  const targetCode = targetLangEl.value;
+
+  if (!text){
+    showOutput('Please enter some text to translate.', { isError:true });
+    return;
+  }
+
+  setLoading(true);
+  try {
+    const result = await translateText(text, sourceCode, targetCode);
+    showOutput(result, { isError:false });
+  } catch (err){
+    showOutput(err.message, { isError:true });
+  } finally {
+    setLoading(false);
+  }
+});
+
+// Shows text (or an error) inside the output panel
+function showOutput(message, { isError }){
+  outputBoxEl.textContent = message;
+  outputBoxEl.classList.remove('placeholder', 'error-text');
+
+  if (isError){
+    outputBoxEl.classList.add('error-text');
+    outputToolsEl.style.display = 'none';
+  } else {
+    outputToolsEl.style.display = 'flex';
+  }
+}
+
+// Toggles the button between normal and "Translating..." state
+function setLoading(isLoading){
+  translateBtn.disabled = isLoading;
+  spinnerEl.style.display = isLoading ? 'inline-block' : 'none';
+  translateBtnText.textContent = isLoading ? 'Translating...' : 'Translate';
+}
+
+/* ================================================================
+   STEP 8 — COPY BUTTON
+   Uses the browser's Clipboard API to copy the translated text.
+================================================================ */
+copyBtn.addEventListener('click', async () => {
+  try {
+    await navigator.clipboard.writeText(outputBoxEl.textContent);
+    const original = copyBtn.innerHTML;
+    copyBtn.innerHTML = 'Copied!';
+    setTimeout(() => { copyBtn.innerHTML = original; }, 1500);
+  } catch {
+    alert('Could not copy automatically — please select and copy the text manually.');
+  }
+});
+
+/* ================================================================
+   STEP 9 — TEXT-TO-SPEECH BUTTON
+   Uses the browser's built-in SpeechSynthesis API — no external
+   API or key needed. Voice availability depends on the user's
+   device/browser.
+================================================================ */
+speakBtn.addEventListener('click', () => {
+  if (!('speechSynthesis' in window)){
+    alert('Text-to-speech is not supported in this browser.');
+    return;
+  }
+  const targetLangData = LANGUAGES.find(l => l.code === targetLangEl.value);
+  const utterance = new SpeechSynthesisUtterance(outputBoxEl.textContent);
+  utterance.lang = targetLangData ? targetLangData.speech : 'en-US';
+
+  window.speechSynthesis.cancel(); // stop anything currently speaking
+  window.speechSynthesis.speak(utterance);
+});
+</script>
+
+</body>
+</html>
